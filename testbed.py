@@ -17,22 +17,21 @@ class TestBed():
         self.arms = arms
         self.runs = runs
         self.bandits = []
-        
+        self.reset()
+    
+    def reset(self) -> None:
         # generate q*(a) for each action value
         self.means = np.random.normal(self.mean, self.stdev, self.arms)
-        # print(means)
-        
-        for i in range(self.arms):
-            bandit = np.random.normal(self.means[i], self.stdev, self.runs)
-            self.bandits.append(bandit)
     
         # optimal action
         self.opt = np.argmax(self.means)
-        # print(self.opt)
         
     def show_plot(self) -> None:
         """Generate a violin plot of the reward distributions for each action value, like Figure 2.1 in the textbook.
         """
+        for i in range(self.arms):
+            bandit = np.random.normal(self.means[i], self.stdev, self.runs)
+            self.bandits.append(bandit)
 
         # violin plot with means and stdevs
         fig, ax = plt.subplots()
@@ -59,5 +58,5 @@ class TestBed():
         # fig.savefig("violin.png")
         # plt.close()
 
-testbed = TestBed()
-testbed.show_plot()
+# testbed = TestBed()
+# testbed.show_plot()
