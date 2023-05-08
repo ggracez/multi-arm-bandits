@@ -54,9 +54,9 @@ class TestBed():
         ax.set_ylim(ymin=-y_max, ymax=y_max)
 
         plt.show()
-        # fig.savefig("scatter.png")
-        # fig.savefig("violin.png")
+        # fig.savefig("figures/2.1_scatter.png")
+        # fig.savefig("figures/2.1_violin.png")
         # plt.close()
 
-# testbed = TestBed()
-# testbed.show_plot()
+testbed = TestBed()
+testbed.show_plot()

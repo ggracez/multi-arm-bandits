@@ -142,7 +142,7 @@ def graph_results(average_reward, optimal_pulls, eps:list[eGreedy]) -> None:
     ax2.legend(eps, loc="lower right")
     
     plt.show()    
-    # fig.savefig("comparison.png")
+    # fig.savefig("figures/2.2_comparison.png")
     
 def main():
     testbed = TestBed()  # can change # of runs here (default 2000)
