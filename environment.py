@@ -2,22 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class TestBed:
+class Environment:
 
-    def __init__(self, mean=0, stdev=1, arms=10, runs=2000) -> None:
-        """10 different arms (options) with each option initialized from a normal/Gaussian distribution
+    def __init__(self, mean=0, stdev=1, arms=10, runs=2000, stationary=True, decay=1) -> None:
+        """Default 10 different arms (options) with each option initialized from a normal/Gaussian distribution
 
         Args:
-            mean (int, optional): _description_. Defaults to 0.
-            stdev (int, optional): _description_. Defaults to 1.
-            arms (int, optional): _description_. Defaults to 10.
-            runs (int, optional): how many bandit problems. Defaults to 2000.
+            mean (int, optional): Mean for each arm. Defaults to 0.
+            stdev (int, optional): Standard deviation. Defaults to 1.
+            arms (int, optional): Number of arms. Defaults to 10.
+            runs (int, optional): Number of bandit problems. Defaults to 2000.
+            stationary (bool, optional): Whether the arms are stationary or not. Defaults to True.
+            decay (int, optional): Decay value for non-stationary arms. Defaults to 0.
         """
         self.mean = mean
         self.stdev = stdev
         self.arms = arms
         self.runs = runs
-        self.bandits = []
+        self.stationary = stationary
+        self.decay = decay
 
         self.reset()
 
@@ -25,19 +28,31 @@ class TestBed:
         # generate q*(a) for each action value
         self.means = np.random.normal(self.mean, self.stdev, self.arms)
 
+        if not self.stationary:
+            # non-stationary environment: random walk arms
+            for i in range(self.arms):
+                walk_size = self.update_arms(self.decay)
+                self.means[i] += walk_size
+
         # optimal action
         self.opt = np.argmax(self.means)
+
+    def update_arms(self, decay) -> float:
+        walk_size = np.random.normal(self.mean, self.stdev)
+        return walk_size * decay
 
     def show_plot(self) -> None:
         """Generate a violin plot of the reward distributions for each action value, like Figure 2.1 in the textbook.
         """
+        bandits = []
+
         for i in range(self.arms):
             bandit = np.random.normal(self.means[i], self.stdev, self.runs)
-            self.bandits.append(bandit)
+            bandits.append(bandit)
 
         # violin plot with means and stdevs
         fig, ax = plt.subplots()
-        ax.violinplot(dataset=self.bandits, showmeans=True, showextrema=False)
+        ax.violinplot(dataset=bandits, showmeans=True, showextrema=False)
 
         # x-axis ticks for each action value
         arms = np.arange(1, self.arms + 1)

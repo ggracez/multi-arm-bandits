@@ -1,4 +1,4 @@
-from testbed import TestBed
+from environment import Environment
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,11 +7,11 @@ import matplotlib.ticker as mtick
 
 class eGreedy:
 
-    def __init__(self, testbed, epsilon=0) -> None:
-        self.testbed = testbed
+    def __init__(self, environment, epsilon=0) -> None:
+        self.environment = environment
         self.epsilon = epsilon
-        self.estimates = np.zeros(self.testbed.arms)  # estimated q
-        self.times_taken = np.zeros(self.testbed.arms)  # n
+        self.estimates = np.zeros(self.environment.arms)  # estimated q
+        self.times_taken = np.zeros(self.environment.arms)  # n
 
     def __str__(self) -> str:
         if self.epsilon == 0:
@@ -26,7 +26,7 @@ class eGreedy:
             int: the best action (which arm to pull)
         """
         if np.random.random() < self.epsilon:  # explore
-            action = np.random.choice(len(self.estimates))  # = np.random.choice(self.testbed.arms)
+            action = np.random.choice(len(self.estimates))  # = np.random.choice(self.environment.arms)
 
         else:  # exploit
             greedy_action = np.argmax(self.estimates)
@@ -57,28 +57,28 @@ class eGreedy:
     def reset(self) -> None:
         """Reset to initial values
         """
-        self.estimates = np.zeros(self.testbed.arms)
-        self.times_taken = np.zeros(self.testbed.arms)
+        self.estimates = np.zeros(self.environment.arms)
+        self.times_taken = np.zeros(self.environment.arms)
 
 
 # actually run the bandit problems
-def run_experiment(agents: list[eGreedy], testbed, steps=1000) -> None:
+def run_experiment(agents: list[eGreedy], environment, steps=1000) -> None:
     """each agent represents a different epsilon value
 
     Args:
         agents (list[eGreedy]): eGreedy agents with different epsilon values
-        testbed (TestBed): defaults to 10-arm testbed with 2000 runs
+        environment (Environment): defaults to 10-arm testbed with 2000 runs
         steps (int, optional): _description_. Defaults to 1000.
     """
     average_reward = np.zeros((steps, len(agents)))
     optimal_pulls = np.zeros((steps, len(agents)))
 
-    for run in range(testbed.runs):
+    for run in range(environment.runs):
 
         if run % 100 == 0:
             print(".", end="")
 
-        testbed.reset()
+        environment.reset()
         for agent in agents:
             agent.reset()
 
@@ -86,19 +86,19 @@ def run_experiment(agents: list[eGreedy], testbed, steps=1000) -> None:
             for i in range(len(agents)):  # for each epsilon value
                 agent = agents[i]
                 action = agent.choose_action()
-                reward = np.random.normal(testbed.means[action], 1)
+                reward = np.random.normal(environment.means[action], 1)
                 agent.update_estimates(reward, action)
 
                 # average reward
                 average_reward[step, i] += reward  # = arr[row][col]
 
                 # % optimal action
-                if action == testbed.opt:
+                if action == environment.opt:
                     optimal_pulls[step, i] += 1
 
     # average the values
-    average_reward /= testbed.runs
-    optimal_pulls /= testbed.runs
+    average_reward /= environment.runs
+    optimal_pulls /= environment.runs
 
     graph_results(average_reward, optimal_pulls, agents)
 
@@ -138,14 +138,14 @@ def graph_results(average_reward, optimal_pulls, eps: list[eGreedy]) -> None:
 
 
 def main():
-    testbed = TestBed()  # can change # of runs here (default 2000)
+    environment = Environment()  # can change # of runs here (default 2000)
     agents = []
     epsilon_vals = [0.1, 0.01, 0]
     for val in epsilon_vals:
-        agents.append(eGreedy(testbed, val))
+        agents.append(eGreedy(environment, val))
     # run the experiment!!
     print("Running Experiment...")
-    run_experiment(agents, testbed)  # can change # of steps here (default 1000)
+    run_experiment(agents, environment)  # can change # of steps here (default 1000)
     print()
 
 
