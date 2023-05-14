@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
 
-class eGreedy():
+class eGreedy:
 
     def __init__(self, testbed, epsilon=0) -> None:
         self.testbed = testbed

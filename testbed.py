@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class TestBed():
+class TestBed:
 
     def __init__(self, mean=0, stdev=1, arms=10, runs=2000) -> None:
         """10 different arms (options) with each option initialized from a normal/Gaussian distribution
