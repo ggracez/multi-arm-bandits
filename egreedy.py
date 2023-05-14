@@ -8,13 +8,8 @@ import matplotlib.ticker as mtick
 class eGreedy():
 
     def __init__(self, testbed, epsilon=0) -> None:
-        # q_t(a) = (sum of rewards when a taken prior to t) / (# of times a taken prior to t)
-        # q_(n+1) = q_n + 1/n * (r_n - q_n)
-        # new += (reward - old) / n
         self.testbed = testbed
         self.epsilon = epsilon
-        self.timestep = 0  # t
-        self.sum_rewards = np.zeros(self.testbed.arms)  # sum of rewards when a taken prior to t
         self.estimates = np.zeros(self.testbed.arms)  # estimated q
         self.times_taken = np.zeros(self.testbed.arms)  # n
 
@@ -48,25 +43,20 @@ class eGreedy():
         return action
 
     def update_estimates(self, reward: float, action) -> None:
-        """update q at time t: 
-            q_t(a) = (sum of rewards when a taken prior to t) / (# of times a taken prior to t)
+        """update rule:
+            q_(n+1) = q_n + 1/n * (r_n - q_n)
+            estimate += (reward - estimate) / n
 
         Args:
-            reward (float): reward at time t
-            action (int): action at time t
+            reward (float): nth reward
+            action (int): nth action
         """
-        self.times_taken[action] += 1
-        self.sum_rewards[action] += reward
-
-        self.estimates[action] = self.sum_rewards[action] / self.times_taken[action]
-
-        self.timestep += 1
+        self.times_taken[action] += 1  # update n
+        self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]  # update q
 
     def reset(self) -> None:
         """Reset to initial values
         """
-        self.timestep = 0
-        self.sum_rewards = np.zeros(self.testbed.arms)
         self.estimates = np.zeros(self.testbed.arms)
         self.times_taken = np.zeros(self.testbed.arms)
 
@@ -154,7 +144,9 @@ def main():
     for val in epsilon_vals:
         agents.append(eGreedy(testbed, val))
     # run the experiment!!
+    print("Running Experiment...")
     run_experiment(agents, testbed)  # can change # of steps here (default 1000)
+    print()
 
 
 if __name__ == "__main__":
