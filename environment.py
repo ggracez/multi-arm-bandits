@@ -20,10 +20,7 @@ class Environment:
     def reset(self):
         # generate q*(a) for each action value
         self.means = np.random.normal(self.mean, self.stdev, self.arms)
-
-        if not self.stationary:
-            # non-stationary environment: random walk arms
-            self.update_arms()
+        self.update_arms()
 
         # optimal action
         self.opt = np.argmax(self.means)
@@ -40,6 +37,7 @@ class Environment:
         """Plot changing means for non-stationary arms
         Different arms have different means
         Note that if the arms are stationary, the arms will be a horizontal line
+        Example: https://www.nature.com/articles/nature04766/figures/1
         """
         true_rewards = np.zeros((trials, self.arms))
         for trial in range(trials):
@@ -51,8 +49,8 @@ class Environment:
         ax.set_xlabel("Trial")
         ax.set_ylabel("Mean")
         ax.legend([f"Arm {i+1}" for i in range(self.arms)])
-        # fig.savefig("figures/nonstationary.png")
         plt.show()
+        # fig.savefig("figures/nonstationary.png")
 
     def show_plot(self):
         """Generate a violin plot of the reward distributions for each action value, like Figure 2.1 in the textbook.
@@ -71,9 +69,6 @@ class Environment:
         arms = np.arange(1, self.arms + 1)
         ax.set_xticks(arms)
 
-        # # scatterplot of means only
-        # ax.scatter(arms, self.means)
-
         # set axis labels
         ax.set_ylabel("Reward Distribution")
         ax.set_xlabel("Action")
@@ -84,9 +79,7 @@ class Environment:
         ax.set_ylim(ymin=-y_max, ymax=y_max)
 
         plt.show()
-        # fig.savefig("figures/2.1_scatter.png")
         # fig.savefig("figures/2.1_violin.png")
-        # plt.close()
 
 
 # # plot fig 2.1

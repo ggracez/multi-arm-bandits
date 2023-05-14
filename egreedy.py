@@ -7,7 +7,7 @@ import matplotlib.ticker as mtick
 
 class eGreedy:
 
-    def __init__(self, environment, epsilon=0) -> None:
+    def __init__(self, environment, epsilon=0.0) -> None:
         self.environment = environment
         self.epsilon = epsilon
         self.estimates = np.zeros(self.environment.arms)  # estimated q
@@ -43,7 +43,7 @@ class eGreedy:
         return action
 
     def update_estimates(self, reward: float, action) -> None:
-        """update rule:
+        """Update rule:
             q_(n+1) = q_n + 1/n * (r_n - q_n)
             estimate += (reward - estimate) / n
 
@@ -62,13 +62,13 @@ class eGreedy:
 
 
 # actually run the bandit problems
-def run_experiment(agents: list[eGreedy], environment, steps=1000) -> None:
+def run_experiment(agents: list[eGreedy], environment, steps=1000):
     """each agent represents a different epsilon value
 
     Args:
-        agents (list[eGreedy]): eGreedy agents with different epsilon values
-        environment (Environment): defaults to 10-arm testbed with 2000 runs
-        steps (int, optional): _description_. Defaults to 1000.
+        agents (list[eGreedy]): eGreedy agents with different epsilon values.
+        environment (Environment): Defaults to 10-arm testbed with 2000 runs.
+        steps (int, optional): Number of time steps per run. Defaults to 1000.
     """
     average_reward = np.zeros((steps, len(agents)))
     optimal_pulls = np.zeros((steps, len(agents)))
@@ -83,6 +83,7 @@ def run_experiment(agents: list[eGreedy], environment, steps=1000) -> None:
             agent.reset()
 
         for step in range(steps):
+            environment.update_arms()
             for i in range(len(agents)):  # for each epsilon value
                 agent = agents[i]
                 action = agent.choose_action()
@@ -100,16 +101,19 @@ def run_experiment(agents: list[eGreedy], environment, steps=1000) -> None:
     average_reward /= environment.runs
     optimal_pulls /= environment.runs
 
-    graph_results(average_reward, optimal_pulls, agents)
+    return average_reward, optimal_pulls
+
+    # graph_results(average_reward, optimal_pulls, agents)
 
 
-def graph_results(average_reward, optimal_pulls, eps: list[eGreedy]) -> None:
+def graph_results(average_reward, optimal_pulls, eps: list[eGreedy], save_loc):
     """Graph results based on Figure 2.2 of the textbook
 
     Args:
         average_reward (numpy.ndarray): xy plot for number of steps vs average reward
         optimal_pulls (numpy.ndarray): xy plot for number of steps vs % optimal action
         eps (list[eGreedy]): different epsilon values
+        save_loc (str): location to save the figure
     """
 
     fig, (ax1, ax2) = plt.subplots(2)
@@ -134,10 +138,9 @@ def graph_results(average_reward, optimal_pulls, eps: list[eGreedy]) -> None:
     ax2.legend(eps, loc="lower right")
 
     plt.show()
-    # fig.savefig("figures/2.2_comparison.png")
+    # fig.savefig(save_loc)
 
-
-def main():
+def run_stationary():
     environment = Environment()  # can change # of runs here (default 2000)
     agents = []
     epsilon_vals = [0.1, 0.01, 0]
@@ -145,8 +148,62 @@ def main():
         agents.append(eGreedy(environment, val))
     # run the experiment!!
     print("Running Experiment...")
-    run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    graph_results(average_reward, optimal_pulls, agents, "figures/2.2_comparison.png")
     print()
+
+
+def run_nonstationary():
+    environment = Environment(arms=4, stationary=False, decay=0.05)
+    agents = [eGreedy(environment, 0.1)]  # e = 0.1
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)
+    graph_results(average_reward, optimal_pulls, agents, "figures/nonstationary.png")
+    print()
+
+def compare_envs():
+    """Compare stationary and nonstationary environments with 10000 steps and 0.1 epsilon
+    """
+    stationary_env = Environment()
+    nonstationary_env = Environment(arms=4, stationary=False, decay=0.05)
+    print("Running Experiment...")
+    s_reward, s_optimal = run_experiment([eGreedy(stationary_env, 0.1)], stationary_env, steps=10000)
+    n_reward, n_optimal = run_experiment([eGreedy(nonstationary_env, 0.1)], nonstationary_env, steps=10000)
+    print()
+
+    # plot graph
+    fig, (ax1, ax2) = plt.subplots(2)
+
+    # average reward
+    ax1.plot(s_reward)
+    ax1.plot(n_reward)
+    ax1.set_ylabel("Average Reward")
+    ax1.set_ylim(bottom=0)
+    ax1.set_xlabel("Steps")
+    ax1.legend(["Stationary", "Nonstationary"])
+
+    # % optimal action
+    ax2.plot(s_optimal)
+    ax2.plot(n_optimal)
+
+    # add percent symbols to y axis
+    yticks = mtick.PercentFormatter(xmax=1)
+    ax2.yaxis.set_major_formatter(yticks)
+    ax2.set_ylim(0, 1)
+
+    ax2.set_ylabel("% Optimal Action")
+    ax2.set_xlabel("Steps")
+    ax2.legend(["Stationary", "Nonstationary"])
+
+    plt.show()
+    fig.savefig("figures/egreedy_environment_comparison.png")
+
+
+def main():
+    # run_stationary()
+    # run_nonstationary()
+    compare_envs()
 
 
 if __name__ == "__main__":
