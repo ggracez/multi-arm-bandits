@@ -113,17 +113,20 @@ def run_experiment(agents: list[eGreedy], environment, steps=1000):
     return average_reward, optimal_pulls
 
 
-def graph_results(average_reward, optimal_pulls, legend, save_loc):
+def graph_results(average_reward, optimal_pulls, title, legend, save_loc):
     """Graph results based on Figure 2.2 of the textbook
 
     Args:
         average_reward (list[numpy.ndarray]): list of xy plots for number of steps vs average reward
         optimal_pulls (list[numpy.ndarray]): list of xy plots for number of steps vs % optimal action
+        title (str): title of the graph
         legend (list[eGreedy | str]): legend for the graph
         save_loc (str): location to save the figure
     """
 
     fig, (ax1, ax2) = plt.subplots(2)
+
+    fig.suptitle(title, fontsize=16)
 
     # Graph 2.2: Average Reward
     for line in average_reward:
@@ -161,7 +164,8 @@ def compare_stationary_eps():
     # run the experiment!!
     print("Running Experiment...")
     average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
-    graph_results([average_reward], [optimal_pulls], agents, "figures/2.2_comparison.png")
+    title = "Different Epsilon Values in a Stationary Environment"
+    graph_results([average_reward], [optimal_pulls], title, agents, "figures/2.2_comparison.png")
     print()
 
 
@@ -177,10 +181,11 @@ def compare_envs():
 
     average_reward = [s_reward, n_reward]
     optimal_pulls = [s_optimal, n_optimal]
+    title = "eGreedy with ε=0.1 in Stationary and Non-stationary Environments"
     legend = ["Stationary", "Nonstationary"]
     save_loc = "figures/egreedy_environment_comparison.png"
 
-    graph_results(average_reward, optimal_pulls, legend, save_loc)
+    graph_results(average_reward, optimal_pulls, title, legend, save_loc)
 
 
 def compare_ns_stepsizes():
@@ -195,10 +200,11 @@ def compare_ns_stepsizes():
 
     average_reward = [sa_reward, erwa_reward]
     optimal_pulls = [sa_optimal, erwa_optimal]
+    title = "Sample Averaging vs Constant Stepsize in a Non-stationary Environment"
     legend = ["stepsize = 1/n", "stepsize = 0.1"]
     save_loc = "figures/nonstationary_stepsize_comparison.png"
 
-    graph_results(average_reward, optimal_pulls, legend, save_loc)
+    graph_results(average_reward, optimal_pulls, title, legend, save_loc)
 
 
 def main():
