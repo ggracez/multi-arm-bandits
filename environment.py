@@ -22,9 +22,6 @@ class Environment:
         self.means = np.random.normal(self.mean, self.stdev, self.arms)
         self.update_arms()
 
-        # optimal action
-        self.opt = np.argmax(self.means)
-
     def update_arms(self):
         """Random walk for non-stationary arms
         """
@@ -32,6 +29,8 @@ class Environment:
             for i in range(self.arms):
                 walk_size = np.random.normal(self.mean, self.stdev)
                 self.means[i] += (walk_size * self.decay)  # higher decay means arms change more rapidly
+        # optimal action
+        self.opt = np.argmax(self.means)
 
     def plot_walk(self, trials):
         """Plot changing means for non-stationary arms
@@ -50,7 +49,7 @@ class Environment:
         ax.set_ylabel("Mean")
         ax.legend([f"Arm {i+1}" for i in range(self.arms)])
         plt.show()
-        # fig.savefig("figures/nonstationary.png")
+        # fig.savefig("figures/nonstationary_arms.png")
 
     def show_plot(self):
         """Generate a violin plot of the reward distributions for each action value, like Figure 2.1 in the textbook.
