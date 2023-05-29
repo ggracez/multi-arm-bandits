@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 class Environment:
 
-    def __init__(self, mean=0, stdev=1, arms=10, runs=2000, stationary=True, decay=1):
+    def __init__(self, mean=0, stdev=1, arms=10, runs=2000, stationary=True, decay=1.0):
         """Default 10 different arms (options) with each option initialized from a normal/Gaussian distribution.
         Runs is the number of bandit problems.
         """
@@ -25,7 +25,7 @@ class Environment:
     def update_arms(self):
         """Random walk for non-stationary arms
         """
-        if not self.stationary:
+        if not self.stationary:  # if non-stationary environment
             for i in range(self.arms):
                 walk_size = np.random.normal(self.mean, self.stdev)
                 self.means[i] += (walk_size * self.decay)  # higher decay means arms change more rapidly
@@ -85,4 +85,4 @@ class Environment:
 # environment = Environment()
 # environment.show_plot()
 # environment = Environment(arms=4, stationary=False, decay=0.05)
-# environment.plot_walk(300)
+# environment.plot_walk(10000)
