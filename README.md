@@ -27,8 +27,6 @@ results in a more stable average reward over time.
 Plotting the non-stationary walk over time tends to results in at least one arm increasing (compared to if it remained
 stationary). When the agent greedily chooses the arm with the highest average reward, it makes sense that the average
 reward would increase over time... even though the egreedy method is not the best method for non-stationary environments.
-On a related note, running the non-stationary environment with a higher epsilon and therefore increased exploration,
-the average reward stays relatively stable over time.
 
 ## Other Links
 - [https://github.com/ShangtongZhang/reinforcement-learning-an-introduction](https://github.com/ShangtongZhang/reinforcement-learning-an-introduction)
