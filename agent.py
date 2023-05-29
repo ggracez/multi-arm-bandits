@@ -7,7 +7,7 @@ import matplotlib.ticker as mtick
 
 class Agent:
 
-    def __init__(self, environment, epsilon=0.0, stepsize=None, ucb_param=None):
+    def __init__(self, environment, epsilon=0.0, stepsize=None, ucb_param=None, gradient=False, baseline=False):
 
         # policy=[egreedy, ucb, gradient]
         # param = [epsilon, ucb_param, stepsize]
@@ -15,14 +15,23 @@ class Agent:
         self.epsilon = epsilon
         self.stepsize = stepsize
         self.c = ucb_param
+        self.gradient = gradient
+        self.baseline = baseline
+        self.average_reward = 0
 
         self.estimates = np.zeros(self.environment.arms)  # estimated q
         self.times_taken = np.zeros(self.environment.arms)  # n
+        self.action_prob = np.zeros(self.environment.arms)  # probability π
         self.time = 0  # t
 
     def __str__(self) -> str:
         if self.c:
             return f"UCB c = {self.c}"
+        elif self.gradient:
+            if self.baseline:
+                return f"Gradient α = {self.stepsize} with baseline"
+            else:
+                return f"Gradient α = {self.stepsize}"
         elif self.epsilon == 0:
             return f"ε = 0 (greedy)"
         else:
@@ -44,6 +53,12 @@ class Agent:
                 action = ucb_action
             else:
                 action = np.random.choice(action)
+
+        elif self.gradient:
+            # soft-max distribution
+            exponential = np.exp(self.estimates)
+            self.action_prob = exponential / np.sum(exponential)
+            action = np.random.choice(len(self.estimates), p=self.action_prob)
 
         elif np.random.random() < self.epsilon:  # explore
             action = np.random.choice(len(self.estimates))  # = np.random.choice(self.environment.arms)
@@ -72,10 +87,25 @@ class Agent:
         """
         self.times_taken[action] += 1  # update n
         self.time += 1  # update t
+        self.average_reward += (reward - self.average_reward) / self.time
 
         if not self.stepsize:
             # sample average stepsize: stepsize = 1/n
             self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]  # update q
+        elif self.gradient:
+            # gradient algorithm uses action preferences, updated with:
+            #   pref += stepsize * (reward - baseline) * (1 - prob of action) for all selected actions and
+            #   pref += stepsize * (reward - baseline) * (0 - prob of action) for all non-selected actions
+            # baseline is average reward up to but not including current time step - very good if mean != 0
+            #   if reward > baseline, then the probability of taking A_t in the future is increased and vice versa
+            #   non-selected actions move in the opposite direction
+            if self.baseline:
+                baseline = self.average_reward
+            else:
+                baseline = 0
+            one_hot = np.zeros(self.environment.arms)
+            one_hot[action] = 1
+            self.estimates += self.stepsize * (reward - baseline) * (one_hot - self.action_prob)
         else:
             # constant stepsize: exponential recency weighted average (ERWA)
             self.estimates[action] += self.stepsize * (reward - self.estimates[action])
@@ -85,6 +115,7 @@ class Agent:
         """
         self.estimates = np.zeros(self.environment.arms)
         self.times_taken = np.zeros(self.environment.arms)
+        self.action_prob = np.zeros(self.environment.arms)
         self.time = 0
 
 
@@ -146,30 +177,37 @@ def graph_results(average_reward, optimal_pulls, title, legend, save_loc):
         save_loc (str): location to save the figure
     """
 
-    fig, (ax1, ax2) = plt.subplots(2)
+    if average_reward and optimal_pulls:
+        fig, (ax1, ax2) = plt.subplots(2)
+    elif average_reward:
+        fig, ax1 = plt.subplots(1)
+    elif optimal_pulls:
+        fig, ax2 = plt.subplots(1)
 
     fig.suptitle(title, fontsize=16)
 
-    # Graph 2.2: Average Reward
-    for line in average_reward:
-        ax1.plot(line)
-    ax1.set_ylabel("Average Reward")
-    ax1.set_ylim(bottom=0)
-    ax1.set_xlabel("Steps")
-    ax1.legend(legend)
+    if average_reward:
+        # Graph 2.2: Average Reward
+        for line in average_reward:
+            ax1.plot(line)
+        ax1.set_ylabel("Average Reward")
+        ax1.set_ylim(bottom=0)
+        ax1.set_xlabel("Steps")
+        ax1.legend(legend)
 
-    # Graph 2.2: % Optimal Action
-    for line in optimal_pulls:
-        ax2.plot(line)
+    if optimal_pulls:
+        # Graph 2.2: % Optimal Action
+        for line in optimal_pulls:
+            ax2.plot(line)
 
-    # add percent symbols to y axis
-    y_ticks = mtick.PercentFormatter(xmax=1)
-    ax2.yaxis.set_major_formatter(y_ticks)
-    ax2.set_ylim(0, 1)
+        # add percent symbols to y axis
+        y_ticks = mtick.PercentFormatter(xmax=1)
+        ax2.yaxis.set_major_formatter(y_ticks)
+        ax2.set_ylim(0, 1)
 
-    ax2.set_ylabel("% Optimal Action")
-    ax2.set_xlabel("Steps")
-    ax2.legend(legend)
+        ax2.set_ylabel("% Optimal Action")
+        ax2.set_xlabel("Steps")
+        ax2.legend(legend)
 
     plt.show()
     fig.savefig(save_loc)
@@ -201,6 +239,53 @@ def compare_stationary_ucb():
     legend = ["eGreedy", "UCB"]
     save_loc = "figures/2.4_egreedy_ucb_comparison.png"
     graph_results([average_reward], [optimal_pulls], title, legend, save_loc)
+    print()
+
+
+def compare_stationary_gradients():
+    environment = Environment(mean=4)  # shift the mean to see effects of the baseline
+    agents = []
+    alpha_vals = [0.1, 0.4]
+    for val in alpha_vals:
+        agents.append(Agent(environment, stepsize=val, gradient=True))
+        agents.append(Agent(environment, stepsize=val, gradient=True, baseline=True))
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)
+    title = "Performance of Gradient Bandit Algorithms in a Stationary Environment"
+    graph_results([], [optimal_pulls], title, agents, "figures/2.5_gradient_comparison.png")
+    print()
+
+
+def compare_stationary_all():
+    environment = Environment()
+    agents = [
+        Agent(environment),  # pure greedy
+        Agent(environment, epsilon=0.1),  # egreedy with epsilon=0.1
+        Agent(environment, ucb_param=2),  # ucb with c=2
+        Agent(environment, stepsize=0.1, gradient=True)  # gradient with alpha=0.1
+    ]
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)
+    title = "Performance of Various Bandit Algorithms in a Stationary Environment"
+    graph_results([], [optimal_pulls], title, agents, "figures/bandits_comparison_stationary.png")
+    print()
+
+
+def compare_nonstationary_all():
+    environment = Environment(arms=4, stationary=False, decay=0.05)
+    agents = [
+        Agent(environment),  # pure greedy
+        Agent(environment, epsilon=0.1),  # egreedy with epsilon=0.1
+        Agent(environment, ucb_param=2),  # ucb with c=2
+        Agent(environment, stepsize=0.1, gradient=True)  # gradient with alpha=0.1
+    ]
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)
+    title = "Performance of Various Bandit Algorithms in a Non-Stationary Environment"
+    graph_results([], [optimal_pulls], title, agents, "figures/bandits_comparison_nonstationary.png")
     print()
 
 
@@ -245,8 +330,9 @@ def compare_ns_stepsizes():
 def main():
     # compare_stationary_eps()
     # compare_envs()
-    compare_stationary_ucb()
+    # compare_stationary_ucb()
     # compare_ns_stepsizes()
+    compare_stationary_gradients()
 
 
 if __name__ == "__main__":
