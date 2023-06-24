@@ -28,6 +28,11 @@ class UCBAgent:
         else:
             self.action_prob = np.ones(self.arms) / self.arms
 
+        if np.isnan(choice):
+            self.likelihoods[time] = 1  # log(1) = 0
+            return
+
+        choice = int(choice)
         self.likelihoods[time] = self.action_prob[choice - 1]
 
         # we do choice-1 because the data is 1-indexed
@@ -49,9 +54,9 @@ class UCBAgent:
 
 def load_data(data):
     df = pd.read_csv(data)
-    time = np.array(df['Trial']).astype(int)
-    rewards = np.array(df['Reward']).astype(int)
-    choices = np.array(df['Choice']).astype(int)
+    time = np.array(df['Trial'])
+    rewards = np.array(df['Reward'])
+    choices = np.array(df['Choice'])
     return time, rewards, choices  # can divide rewards by 100... why do so?
 
 
