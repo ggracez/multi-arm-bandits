@@ -7,7 +7,7 @@ from scipy.optimize import minimize_scalar
 
 class UCBAgent:
 
-    def __init__(self, arms, ucb_param, trials=400):  # fix bc it might not be 400
+    def __init__(self, arms, ucb_param, trials):
         self.arms = arms
         self.c = ucb_param
         self.trials = trials
@@ -34,10 +34,10 @@ class UCBAgent:
         self.times_taken[choice - 1] += 1  # update n
 
         # # sample average stepsize: stepsize = 1/n
-        # self.estimates[choice - 1] += (reward - self.estimates[choice - 1]) / self.times_taken[choice - 1]  # update q
+        # self.estimates[choice - 1] += (reward - self.estimates[choice - 1]) / self.times_taken[choice - 1]
 
         # constant stepsize
-        step_size = .9
+        step_size = .9  # chosen at random
         self.estimates[choice - 1] += step_size * (reward - self.estimates[choice - 1])
 
     def reset(self):
@@ -55,23 +55,23 @@ def load_data(data):
     return time, rewards, choices  # can divide rewards by 100... why do so?
 
 
-def negative_log_likelihood(param, data):
+def negative_log_likelihood(ucb_param, trials, data):
     time, rewards, choices = load_data(data)
-    agent = UCBAgent(arms=4, ucb_param=param)
+    agent = UCBAgent(arms=4, ucb_param=ucb_param, trials=trials)
     for t in time:
         agent.update_estimates(t - 1, rewards[t - 1], choices[t - 1])
     log_likelihood = -(np.sum(np.log(agent.likelihoods)))
-    agent.reset()
+    # agent.reset()
     return log_likelihood
 
 
-def manual_optimization(data):
+def manual_optimization(data, trials):
     params = np.arange(0.01, 5, 0.01)
     param_list = []  # x axis
     likelihood_list = []  # y axis
 
     for param in params:
-        log_likelihood = negative_log_likelihood(param, data)
+        log_likelihood = negative_log_likelihood(param, trials, data)
         param_list.append(param)
         likelihood_list.append(log_likelihood)
 
@@ -86,9 +86,9 @@ def manual_optimization(data):
     return min_likelihood, min_param, param_list, likelihood_list
 
 
-def scipy_optimization(data):
+def scipy_optimization(data, trials):
     param_bounds = (0, 5)
-    res = minimize_scalar(negative_log_likelihood, bounds=param_bounds, args=(data,))
+    res = minimize_scalar(negative_log_likelihood, bounds=param_bounds, args=(trials, data,))
     print("SCIPY OPTIMIZATION =====================")
     print(f"Optimized param c = {res.x}")
     print(f"Log likelihood = {res.fun}")
@@ -117,8 +117,9 @@ def plot_graph(param_list, likelihood_list, min_param1, min_likelihood1, min_par
 
 def main():
     data = 'data/4Arm_Bandit_Behavioural.csv'
-    min_likelihood1, min_param1, param_list, likelihood_list = manual_optimization(data)
-    min_param2, min_likelihood2 = scipy_optimization(data)
+    trials = 400
+    min_likelihood1, min_param1, param_list, likelihood_list = manual_optimization(data, trials)
+    min_param2, min_likelihood2 = scipy_optimization(data, trials)
     # plot_graph(param_list, likelihood_list, min_param1, min_likelihood1, min_param2, min_likelihood2)
 
 
