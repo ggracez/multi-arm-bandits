@@ -64,7 +64,7 @@ class Agent:
             action = np.random.choice(len(self.estimates))  # = np.random.choice(self.environment.arms)
 
         else:  # exploit
-            greedy_action = np.argmax(self.estimates)  # TODO: human choice data here instead of model choosing
+            greedy_action = np.argmax(self.estimates)
 
             # find actions with same value as greedy action
             action = np.where(self.estimates == greedy_action)[0]  # returns list of actions
