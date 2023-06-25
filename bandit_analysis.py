@@ -1,7 +1,6 @@
 from environment import Environment
 from agent import Agent
 
-# actually run the bandit problems
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -230,10 +229,6 @@ def main():
     # compare_stationary_gradients()
     # compare_stationary_all()
     # compare_nonstationary_all()
-
-    # data = "data/4Arm_Bandit_Behavioural.csv"
-    # a, b = load_data(data)
-    # print(b)
 
 
 if __name__ == "__main__":
