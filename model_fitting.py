@@ -10,7 +10,7 @@ from scipy.optimize import minimize_scalar
 class BaseAgent:
     def __init__(self, arms, param, trials):
         self.arms = arms
-        self.epsilon = self.c = param
+        self.epsilon = self.c = self.alpha = param
         self.trials = trials
 
         self.estimates = np.zeros(self.arms)  # estimated q
@@ -70,6 +70,30 @@ class UCBAgent(BaseAgent):
         self.update_estimates(time, reward, choice)
 
 
+class GradientAgent(BaseAgent):
+
+    def __str__(self) -> str:
+        return f"Gradient α = {self.alpha}"
+
+    def get_likelihoods(self, time, reward, choice):
+        if np.isnan(choice):
+            self.likelihoods[time] = 1  # log(1) = 0
+            return
+
+        exponential = np.exp(self.estimates)
+        self.action_prob = exponential / np.sum(exponential)
+
+        self.update_estimates(time, reward, choice)
+
+    def update_estimates(self, time, reward, choice):
+        choice = int(choice)
+        self.likelihoods[time] = self.action_prob[choice - 1]
+        self.times_taken[choice - 1] += 1
+        one_hot = np.zeros(self.arms)
+        one_hot[choice - 1] = 1
+        self.estimates += self.alpha * reward * (one_hot - self.action_prob)
+
+
 def load_data(data):
     df = pd.read_csv(data)
     time = np.array(df['Trial'])
@@ -82,6 +106,8 @@ def negative_log_likelihood(param, model, trials, data):
     time, rewards, choices = load_data(data)
     if model == "UCB":
         agent = UCBAgent(arms=4, param=param, trials=trials)
+    if model == "Gradient":
+        agent = GradientAgent(arms=4, param=param, trials=trials)
     else:  # model is eGreedy
         agent = eGreedyAgent(arms=4, param=param, trials=trials)
     for t in time:
@@ -134,6 +160,8 @@ def run_bandits(model, arms, runs, param, arm_vals):
     environment = Environment(arms=arms, runs=runs)
     if model == "UCB":
         agent = Agent(environment=environment, ucb_param=param)
+    if model == "Gradient":
+        agent = Agent(environment=environment, stepsize=param, gradient=True)
     else:  # model is eGreedy
         agent = Agent(environment=environment, epsilon=param)
     average_reward = 0
@@ -148,7 +176,7 @@ def run_bandits(model, arms, runs, param, arm_vals):
 
 def main():
     num_participants = 5
-    models = ["UCB", "eGreedy"]
+    models = ["UCB", "eGreedy", "Gradient"]
     model_ave_rewards = {}
     for i in range(num_participants):
         print(f"PARTICIPANT {i + 1}")
@@ -166,7 +194,7 @@ def main():
             print(f"MODEL: {model} {divider}")
             min_param1 = manual_optimization(behavioural_data, model, trials)
             min_param2 = scipy_optimization(behavioural_data, model, trials)
-            average_reward = run_bandits(model, num_arms, trials, min_param1, arm_vals)
+            average_reward = run_bandits(model, num_arms, trials, min_param2, arm_vals)
             model_ave_rewards[model] = average_reward
 
         print("=" * 30)
