@@ -1,3 +1,6 @@
+from environment import Environment
+from agent import Agent
+
 import numpy as np
 import pandas as pd
 
@@ -120,12 +123,56 @@ def plot_graph(param_list, likelihood_list, min_param1, min_likelihood1, min_par
     plt.show()
 
 
+def initialize_arms(data):
+    df = pd.read_csv(data)
+    arms = []
+    num_arms = len(df.columns)
+    for i in range(num_arms):
+        arm = np.array(df[f'Arm_{i + 1}'])
+        # arm = np.array(df[f'Arm_{i + 1}'] / 100)
+        arms.append(arm)
+    return arms
+
+
+def run_bandit(arms, runs, ucb_param, arm_vals):
+    environment = Environment(arms=arms, runs=runs)
+    ucb_agent = Agent(environment=environment, ucb_param=ucb_param)
+    average_reward = 0
+    for run in range(environment.runs):
+        action = ucb_agent.choose_action()
+        reward = arm_vals[action][run]
+        ucb_agent.update_estimates(reward, action)
+        average_reward += reward
+    average_reward /= environment.runs
+    return average_reward
+
+
 def main():
-    data = 'data/4Arm_Bandit_Behavioural.csv'
-    trials = 400
-    min_likelihood1, min_param1, param_list, likelihood_list = manual_optimization(data, trials)
-    min_param2, min_likelihood2 = scipy_optimization(data, trials)
-    # plot_graph(param_list, likelihood_list, min_param1, min_likelihood1, min_param2, min_likelihood2)
+    num_participants = 5
+    for i in range(num_participants):
+        print(f"PARTICIPANT {i + 1}")
+
+        participant = f'P00{i + 1}'
+        arm_data = f'data/{participant}_ArmValues.csv'
+        behavioural_data = f'data/{participant}_Behavioural.csv'
+        arm_vals = initialize_arms(arm_data)
+        num_arms = len(arm_vals)
+        trials = len(arm_vals[0])
+
+        min_likelihood1, min_param1, param_list, likelihood_list = manual_optimization(behavioural_data, trials)
+        min_param2, min_likelihood2 = scipy_optimization(behavioural_data, trials)
+        # plot_graph(param_list, likelihood_list, min_param1, min_likelihood1, min_param2, min_likelihood2)
+
+        average_reward = run_bandit(num_arms, trials, min_param1, arm_vals)  # using manual optimization output
+
+        df = pd.read_csv(behavioural_data)
+        # df['Reward'] = df['Reward'] / 100
+        behavioural_average_reward = df['Reward'].sum() / trials
+
+        print("========================================")
+        print(f"Average reward for UCB agent = {average_reward}")
+        print(f"Average reward for participant data = {behavioural_average_reward}")
+        print()
 
 
 if __name__ == "__main__":
