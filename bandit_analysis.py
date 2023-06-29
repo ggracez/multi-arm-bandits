@@ -53,7 +53,7 @@ def run_experiment(agents: list[Agent], environment, steps=1000):
 
 
 def graph_results(average_reward, optimal_pulls, title, legend, save_loc):
-    """Graph results based on Figure 2.2 of the textbook
+    """Graph results: average reward and % optimal action
 
     Args:
         average_reward (list[numpy.ndarray]): list of xy plots for number of steps vs average reward
@@ -73,7 +73,7 @@ def graph_results(average_reward, optimal_pulls, title, legend, save_loc):
     fig.suptitle(title, fontsize=16)
 
     if average_reward:
-        # Graph 2.2: Average Reward
+        # Average Reward
         for line in average_reward:
             ax1.plot(line)
         ax1.set_ylabel("Average Reward")
@@ -82,7 +82,7 @@ def graph_results(average_reward, optimal_pulls, title, legend, save_loc):
         ax1.legend(legend)
 
     if optimal_pulls:
-        # Graph 2.2: % Optimal Action
+        # % Optimal Action
         for line in optimal_pulls:
             ax2.plot(line)
 
@@ -153,9 +153,10 @@ def compare_stationary_all():
     environment = Environment()
     agents = [
         Agent(environment),  # pure greedy
-        Agent(environment, epsilon=0.1),  # egreedy with epsilon=0.1
+        Agent(environment, epsilon=0.1),  # egreedy with ε=0.1
+        Agent(environment, epsilon=0.1, stepsize=0.1),  # egreedy with constant stepsize
         Agent(environment, ucb_param=2),  # ucb with c=2
-        Agent(environment, stepsize=0.1, gradient=True)  # gradient with alpha=0.1
+        Agent(environment, stepsize=0.1, gradient=True)  # gradient w α=0.1, no need for baseline bc stationary mean = 0
     ]
     # run the experiment!!
     print("Running Experiment...")
@@ -221,15 +222,11 @@ def compare_ns_stepsizes():
     graph_results(average_reward, optimal_pulls, title, legend, save_loc)
 
 
-def main():
-    compare_stationary_eps()
-    # compare_envs()
-    # compare_stationary_ucb()
-    # compare_ns_stepsizes()
-    # compare_stationary_gradients()
-    # compare_stationary_all()
-    # compare_nonstationary_all()
+compare_stationary_eps()
+# compare_envs()
+# compare_stationary_ucb()
+# compare_ns_stepsizes()
+# compare_stationary_gradients()
+# compare_stationary_all()
+# compare_nonstationary_all()
 
-
-if __name__ == "__main__":
-    main()
