@@ -1,10 +1,9 @@
 # Multi-Arm Bandits
 
-Playing around with some RL models in Python!! :) 
-Following along chapter 2 of [Sutton & Barto (2018)](http://incompleteideas.net/book/RLbook2020.pdf).
+Playing around with some RL models in Python!! :)
 
 ## Figures
-Example 10-arm testbed sampled from a normal distribution with mean zero and unit variance.
+Example stationary 10-arm testbed sampled from a normal distribution with mean zero and unit variance.
 ![Figure 2.1: Violin Plot](figures/2.1_violin.png)
 
 Comparison between different epsilon values for the 10-arm testbed (stationary environment). 
@@ -28,7 +27,13 @@ Plotting the non-stationary walk over time tends to results in at least one arm 
 stationary). When the agent greedily chooses the arm with the highest average reward, it makes sense that the average
 reward would increase over time... even though the egreedy method is not the best method for non-stationary environments.
 
-## Other Links
+We also try different models such as UCB and Gradient.
+![Comparison Between Various Bandit Algorithms in a Stationary Environment](figures/bandits_comparison_stationary.png)
+![Comparison Between Various Bandit Algorithms in a Non-Stationary Environment](figures/bandits_comparison_nonstationary.png)
+
+
+## Resources
+- Chapter 2 of [Sutton & Barto (2018)](http://incompleteideas.net/book/RLbook2020.pdf)
 - [https://github.com/ShangtongZhang/reinforcement-learning-an-introduction](https://github.com/ShangtongZhang/reinforcement-learning-an-introduction)
 - [https://github.com/jettdlee/10_armed_bandit](https://github.com/jettdlee/10_armed_bandit)
 - [https://github.com/dquail/NonStationaryBandit](https://github.com/dquail/NonStationaryBandit)
