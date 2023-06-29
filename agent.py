@@ -54,8 +54,7 @@ class Agent:
                 return f"Gradient α = {self.alpha}"
 
     def choose_action(self) -> int:
-        """either greedy (exploit) or epsilon (explore)
-
+        """
         Returns:
             int: the best action (which arm to pull)
         """
