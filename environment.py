@@ -84,5 +84,7 @@ class Environment:
 # # plot fig 2.1
 # environment = Environment()
 # environment.show_plot()
+
+# # plot non-stationary
 # environment = Environment(arms=4, stationary=False, decay=0.05)
 # environment.plot_walk(10000)
