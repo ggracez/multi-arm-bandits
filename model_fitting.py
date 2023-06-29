@@ -32,6 +32,12 @@ class BaseAgent:
         step_size = .9  # chosen at random
         self.estimates[choice - 1] += step_size * (reward - self.estimates[choice - 1])
 
+    def reset(self):
+        self.estimates = np.zeros(self.arms)  # estimated q
+        self.times_taken = np.zeros(self.arms)  # n
+        self.action_prob = np.zeros(self.arms)  # likelihood array
+        self.likelihoods = np.zeros(self.trials)  # array of likelihoods
+
 
 class eGreedyAgent(BaseAgent):
 
@@ -106,7 +112,7 @@ def negative_log_likelihood(param, model, trials, data):
     time, rewards, choices = load_data(data)
     if model == "UCB":
         agent = UCBAgent(arms=4, param=param, trials=trials)
-    if model == "Gradient":
+    elif model == "Gradient":
         agent = GradientAgent(arms=4, param=param, trials=trials)
     else:  # model is eGreedy
         agent = eGreedyAgent(arms=4, param=param, trials=trials)
@@ -159,11 +165,11 @@ def initialize_arms(data):
 def run_bandits(model, arms, runs, param, arm_vals):
     environment = Environment(arms=arms, runs=runs)
     if model == "UCB":
-        agent = Agent(environment=environment, ucb_param=param)
-    if model == "Gradient":
-        agent = Agent(environment=environment, stepsize=param, gradient=True)
+        agent = Agent(environment=environment, policy="ucb", param=param)
+    elif model == "Gradient":
+        agent = Agent(environment=environment, policy="gradient", param=param)
     else:  # model is eGreedy
-        agent = Agent(environment=environment, epsilon=param)
+        agent = Agent(environment=environment, policy="egreedy", param=param)
     average_reward = 0
     for run in range(environment.runs):
         action = agent.choose_action()

@@ -106,7 +106,7 @@ def compare_stationary_eps():
     agents = []
     epsilon_vals = [0.1, 0.01, 0]
     for val in epsilon_vals:
-        agents.append(Agent(environment, epsilon=val))
+        agents.append(Agent(environment, policy="egreedy", param=val))
     # run the experiment!!
     print("Running Experiment...")
     average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
@@ -119,8 +119,8 @@ def compare_stationary_ucb():
     """Compare eGreedy and UCB in a stationary environment
     """
     environment = Environment()
-    egreedy_agent = Agent(environment, epsilon=0.1)
-    ucb_agent = Agent(environment, ucb_param=2)
+    egreedy_agent = Agent(environment, policy="egreedy", param=0.1)
+    ucb_agent = Agent(environment, policy="ucb", param=2)
     print("Running Experiment...")
     average_reward, optimal_pulls = run_experiment([egreedy_agent, ucb_agent], environment)
     title = "eGreedy with ε=0.1 and UCB with c=2 in a Stationary Environment"
@@ -137,8 +137,8 @@ def compare_stationary_gradients():
     agents = []
     alpha_vals = [0.1, 0.4]
     for val in alpha_vals:
-        agents.append(Agent(environment, stepsize=val, gradient=True))
-        agents.append(Agent(environment, stepsize=val, gradient=True, baseline=True))
+        agents.append(Agent(environment, policy="gradient", param=val))
+        agents.append(Agent(environment, policy="gradient", param=val, baseline=True))
     # run the experiment!!
     print("Running Experiment...")
     average_reward, optimal_pulls = run_experiment(agents, environment)
@@ -152,11 +152,11 @@ def compare_stationary_all():
     """
     environment = Environment()
     agents = [
-        Agent(environment),  # pure greedy
-        Agent(environment, epsilon=0.1),  # egreedy with ε=0.1
-        Agent(environment, epsilon=0.1, stepsize=0.1),  # egreedy with constant stepsize
-        Agent(environment, ucb_param=2),  # ucb with c=2
-        Agent(environment, stepsize=0.1, gradient=True)  # gradient w α=0.1, no need for baseline bc stationary mean = 0
+        Agent(environment, policy="egreedy", param=0),  # pure greedy
+        Agent(environment, policy="egreedy", param=0.1),  # egreedy with ε=0.1
+        Agent(environment, policy="egreedy", param=0.1, stepsize=0.1),  # egreedy with constant stepsize
+        Agent(environment, policy="ucb", param=2),  # ucb with c=2
+        Agent(environment, policy="gradient", param=0.1),  # gradient w α=0.1, no need for baseline bc stationary mean=0
     ]
     # run the experiment!!
     print("Running Experiment...")
@@ -169,12 +169,11 @@ def compare_stationary_all():
 def compare_nonstationary_all():
     environment = Environment(arms=4, stationary=False, decay=0.05)
     agents = [
-        Agent(environment),  # pure greedy
-        Agent(environment, epsilon=0.1),  # egreedy with epsilon=0.1
-        Agent(environment, epsilon=0.1, stepsize=0.1),  # egreedy with constant stepsize
-        Agent(environment, ucb_param=2),  # ucb with c=2
-        # Agent(environment, stepsize=0.1, gradient=True),  # gradient with alpha=0.1
-        Agent(environment, stepsize=0.1, gradient=True, baseline=True, baseline_stepsize=0.1)  # gradient with baseline
+        Agent(environment, policy="egreedy", param=0),  # pure greedy
+        Agent(environment, policy="egreedy", param=0.1),  # egreedy with epsilon=0.1
+        Agent(environment, policy="egreedy", param=0.1, stepsize=0.1),  # egreedy with constant stepsize
+        Agent(environment, policy="ucb", param=2),  # ucb with c=2
+        Agent(environment, policy="gradient", param=0.1, baseline=True)  # gradient with baseline
     ]
     # run the experiment!!
     print("Running Experiment...")
@@ -190,8 +189,8 @@ def compare_envs():
     stationary_env = Environment(arms=4)
     nonstationary_env = Environment(arms=4, stationary=False, decay=0.05)
     print("Running Experiment...")
-    s_reward, s_optimal = run_experiment([Agent(stationary_env, 0.1)], stationary_env, steps=1000)
-    n_reward, n_optimal = run_experiment([Agent(nonstationary_env, 0.1)], nonstationary_env, steps=1000)
+    s_reward, s_optimal = run_experiment([Agent(stationary_env, "egreedy", 0.1)], stationary_env, steps=1000)
+    n_reward, n_optimal = run_experiment([Agent(nonstationary_env, "egreedy", 0.1)], nonstationary_env, steps=1000)
     print()
 
     average_reward = [s_reward, n_reward]
@@ -208,9 +207,9 @@ def compare_ns_stepsizes():
     """
     env = Environment(arms=4, stationary=False, decay=0.05)
     print("Running Experiment...")
-    sa_reward, sa_optimal = run_experiment([Agent(env, 0.1, None)], env, steps=10000)
+    sa_reward, sa_optimal = run_experiment([Agent(env, "egreedy", param=0.1)], env, steps=10000)
     env.reset()
-    erwa_reward, erwa_optimal = run_experiment([Agent(env, 0.1, 0.1)], env, steps=10000)
+    erwa_reward, erwa_optimal = run_experiment([Agent(env, "egreedy", param=0.1, stepsize=0.1)], env, steps=10000)
     print()
 
     average_reward = [sa_reward, erwa_reward]
@@ -222,7 +221,7 @@ def compare_ns_stepsizes():
     graph_results(average_reward, optimal_pulls, title, legend, save_loc)
 
 
-compare_stationary_eps()
+# compare_stationary_eps()
 # compare_envs()
 # compare_stationary_ucb()
 # compare_ns_stepsizes()
