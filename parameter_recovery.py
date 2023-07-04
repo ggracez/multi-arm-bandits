@@ -1,13 +1,12 @@
 import pandas as pd
-
-from environment import Environment
-from agent import Agent
-from model_fitting import eGreedyAgent, UCBAgent, GradientAgent
-
 import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize_scalar
+
+from environment import Environment
+from agent import Agent
+from model_fitting import eGreedyAgent, UCBAgent, GradientAgent
 
 
 def initialize_arms(arm_data):
