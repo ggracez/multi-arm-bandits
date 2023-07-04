@@ -8,10 +8,11 @@ from scipy.optimize import minimize_scalar
 
 
 class BaseAgent:
-    def __init__(self, arms, param, trials):
+    def __init__(self, arms, param, trials, stepsize=.9):
         self.arms = arms
         self.epsilon = self.c = self.alpha = param
         self.trials = trials
+        self.stepsize = stepsize  # learning rate
 
         self.estimates = np.zeros(self.arms)  # estimated q
         self.times_taken = np.zeros(self.arms)  # n
@@ -29,8 +30,8 @@ class BaseAgent:
         # self.estimates[choice - 1] += (reward - self.estimates[choice - 1]) / self.times_taken[choice - 1]
 
         # constant stepsize
-        step_size = .9  # chosen at random
-        self.estimates[choice - 1] += step_size * (reward - self.estimates[choice - 1])
+        # step_size = .9  # chosen at random
+        self.estimates[choice - 1] += self.stepsize * (reward - self.estimates[choice - 1])
 
     def reset(self):
         self.estimates = np.zeros(self.arms)  # estimated q
@@ -108,14 +109,14 @@ def load_data(data):
     return time, rewards, choices  # can divide rewards by 100... why do so?
 
 
-def negative_log_likelihood(param, model, trials, data):
+def negative_log_likelihood(param, stepsize, model, trials, data):
     time, rewards, choices = load_data(data)
     if model == "UCB":
-        agent = UCBAgent(arms=4, param=param, trials=trials)
+        agent = UCBAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     elif model == "Gradient":
-        agent = GradientAgent(arms=4, param=param, trials=trials)
+        agent = GradientAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     else:  # model is eGreedy
-        agent = eGreedyAgent(arms=4, param=param, trials=trials)
+        agent = eGreedyAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     for t in time:
         agent.get_likelihoods(t - 1, rewards[t - 1], choices[t - 1])
     log_likelihood = -(np.sum(np.log(agent.likelihoods)))
@@ -124,19 +125,25 @@ def negative_log_likelihood(param, model, trials, data):
 
 def manual_optimization(data, model, trials):
     params = np.arange(0.01, 1, 0.01)
+    stepsizes = np.arange(0.1, 1, 0.1)
     param_list = []  # x axis
+    stepsize_list = []
     likelihood_list = []  # y axis
 
     for param in params:
-        log_likelihood = negative_log_likelihood(param, model, trials, data)
-        param_list.append(param)
-        likelihood_list.append(log_likelihood)
+        for stepsize in stepsizes:
+            log_likelihood = negative_log_likelihood(param, stepsize, model, trials, data)
+            param_list.append(param)
+            stepsize_list.append(stepsize)
+            likelihood_list.append(log_likelihood)
 
-    # find param for min log likelihood
+    # find params for min log likelihood
     min_likelihood = np.min(likelihood_list)
     min_param = param_list[np.argmin(likelihood_list)]
+    min_stepsize = stepsize_list[np.argmin(likelihood_list)]
 
     print(f"Optimized param (MANUAL) = {min_param}")
+    print(f"Optimized stepsize (MANUAL) = {min_stepsize}")
     print(f"Log likelihood (MANUAL) = {min_likelihood}")
 
     return min_param
@@ -181,8 +188,10 @@ def run_bandits(model, arms, runs, param, arm_vals):
 
 
 def main():
+    # num_participants = 5
     num_participants = 5
-    models = ["UCB", "eGreedy", "Gradient"]
+    # models = ["UCB", "eGreedy", "Gradient"]
+    models = ["eGreedy"]
     model_ave_rewards = {}
     for i in range(num_participants):
         print(f"PARTICIPANT {i + 1}")
@@ -199,8 +208,8 @@ def main():
             divider = "=" * num_spaces
             print(f"MODEL: {model} {divider}")
             min_param1 = manual_optimization(behavioural_data, model, trials)
-            min_param2 = scipy_optimization(behavioural_data, model, trials)
-            average_reward = run_bandits(model, num_arms, trials, min_param2, arm_vals)
+            # min_param2 = scipy_optimization(behavioural_data, model, trials)
+            average_reward = run_bandits(model, num_arms, trials, min_param1, arm_vals)
             model_ave_rewards[model] = average_reward
 
         print("=" * 30)
