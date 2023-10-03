@@ -3,13 +3,13 @@ import numpy as np
 
 class Agent:
 
-    def __init__(self, environment, policy, param, stepsize=None, baseline=False):
+    def __init__(self, environment, policy, param, stepsize=None, baseline=False, explore=None):
         """
         Args:
             environment (Environment)
             policy (str): eGreedy, UCB, or gradient
-            param (float): epsilon, c, or alpha
-            stepsize (float, optional): The stepsize to use (for non-stationary envs). Defaults to None.
+            param (float): epsilon, c, alpha, or tau
+            stepsize (float, optional): learning rate parameter. Defaults to None.
             baseline (bool, optional): Whether to use a baseline. Defaults to False.
         """
 
@@ -27,11 +27,16 @@ class Agent:
             self.baseline = baseline
             self.average_reward = 0
 
+        elif self.policy == "softmax":
+            self.temp = param
+            self.explore = explore
+
         self.stepsize = stepsize  # for gradient, this is the baseline stepsize (not implemented)
 
         self.estimates = np.zeros(self.environment.arms)  # estimated q
         self.times_taken = np.zeros(self.environment.arms)  # n
         self.action_prob = np.zeros(self.environment.arms)  # probability π
+        self.action_history = np.zeros(self.environment.arms)  # history of actions taken (T_j for softmax explore)
         self.time = 0  # t
 
     def __str__(self) -> str:
@@ -52,6 +57,12 @@ class Agent:
                 return f"Gradient α = {self.alpha} with baseline"
             else:
                 return f"Gradient α = {self.alpha}"
+
+        elif self.policy == "softmax":
+            if self.explore:
+                return f"Softmax τ = {self.temp} with explore = {self.explore}"
+            else:
+                return f"Softmax τ = {self.temp}"
 
     def choose_action(self) -> int:
         """
@@ -84,9 +95,21 @@ class Agent:
                 action = np.random.choice(action)
 
         elif self.policy == "gradient":
-            # soft-max distribution
             exponential = np.exp(self.estimates)
             self.action_prob = exponential / np.sum(exponential)
+            action = np.random.choice(len(self.estimates), p=self.action_prob)
+
+        elif self.policy == "softmax":
+            # NOTE: do we add 1 to time???? we should be counting the current trial, I forget if the trial is 0 or 1
+            if self.explore:
+                uncertainty = self.explore * (self.time - self.action_history)
+                exponential = np.exp((self.estimates / self.temp) + uncertainty)
+            else:
+                exponential = np.exp(self.estimates / self.temp)
+            self.action_prob = exponential / np.sum(exponential)
+            # print(self.estimates)
+            # print(exponential)
+            # print(self.action_prob)
             action = np.random.choice(len(self.estimates), p=self.action_prob)
 
         return action
@@ -101,16 +124,9 @@ class Agent:
         """
         self.times_taken[action] += 1  # update n
         self.time += 1  # update t
+        self.action_history[action] = self.time  # update last action
 
-        if self.policy == "egreedy" or self.policy == "ucb":
-            if not self.stepsize:
-                # sample average stepsize: stepsize = 1/n
-                self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]
-            else:
-                # constant stepsize: exponential recency weighted average (ERWA)
-                self.estimates[action] += self.stepsize * (reward - self.estimates[action])
-
-        elif self.policy == "gradient":
+        if self.policy == "gradient":
             # gradient algorithm uses action preferences, updated with:
             #   pref += stepsize * (reward - baseline) * (1 - prob of action) for all selected actions and
             #   pref += stepsize * (reward - baseline) * (0 - prob of action) for all non-selected actions
@@ -126,10 +142,19 @@ class Agent:
             one_hot[action] = 1
             self.estimates += self.alpha * (reward - baseline) * (one_hot - self.action_prob)
 
+        else:
+            if not self.stepsize:
+                # sample average stepsize: stepsize = 1/n
+                self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]
+            else:
+                # constant stepsize: exponential recency weighted average (ERWA)
+                self.estimates[action] += self.stepsize * (reward - self.estimates[action])
+
     def reset(self):
         """Reset to initial values
         """
         self.estimates = np.zeros(self.environment.arms)
         self.times_taken = np.zeros(self.environment.arms)
         self.action_prob = np.zeros(self.environment.arms)
+        self.action_history = np.zeros(self.environment.arms)
         self.time = 0

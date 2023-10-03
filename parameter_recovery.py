@@ -6,14 +6,14 @@ from scipy.optimize import minimize_scalar
 
 from environment import Environment
 from agent import Agent
-from model_fitting import eGreedyAgent, UCBAgent, GradientAgent
+from model_fitting import eGreedyAgent, UCBAgent, SoftmaxAgent, GradientAgent
 
 
 def initialize_arms(arm_data):
     df = pd.read_csv(arm_data)
     arms = []
     for i in range(len(df.columns)):
-        arm = np.array(df[f'Arm_{i + 1}'])
+        arm = np.array(df[f'Arm_{i + 1}'] / 100)
         arms.append(arm)
     return arms
 
@@ -38,6 +38,8 @@ def negative_log_likelihood(param, stepsize, model, trials, choices, rewards):
         agent = eGreedyAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     elif model == "UCB":
         agent = UCBAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
+    elif model == "Softmax":
+        agent = SoftmaxAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     else:  # model is Gradient
         agent = GradientAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     for t in range(trials):
@@ -97,21 +99,27 @@ def plot_correlation(model, param_type, simulated, recovered):
 
 def main():
     arm_data_file = "data/P001_ArmValues.csv"
-    model = "eGreedy"
+    # model = "eGreedy"
+    model = "Softmax"
     arms = initialize_arms(arm_data_file)
-    eps = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    # eps = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    eps = [0.1, 0.2, 0.3, 0.4, 0.5]
     recovered_eps = []
     recovered_steps = []
     for e in eps:
-        print(f"Simulated epsilon = {e}")
+        # print(f"Simulated epsilon = {e}")
+        print(f"Simulated temperature = {e}")
         choices, rewards = generate_simulated(model, e, e, arms)
         # sim = scipy_optimization(choices, rewards, model, len(arms[0]))
         sim_param, sim_step = manual_optimization(choices, rewards, model, len(arms[0]))
         recovered_eps.append(sim_param)
         recovered_steps.append(sim_step)
-    plot_correlation(model, "Epsilon", eps, recovered_eps)
+    # plot_correlation(model, "Epsilon", eps, recovered_eps)
+    plot_correlation(model, "Temperature", eps, recovered_eps)
     plot_correlation(model, "Learning Rate", eps, recovered_steps)
 
 
 if __name__ == "__main__":
     main()
+
+# NOTE: only manual optimization rn (idk how scipy works for more than one variable)

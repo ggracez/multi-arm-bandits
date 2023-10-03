@@ -10,7 +10,7 @@ from scipy.optimize import minimize_scalar
 class BaseAgent:
     def __init__(self, arms, param, trials, stepsize=.9):
         self.arms = arms
-        self.epsilon = self.c = self.alpha = param
+        self.epsilon = self.c = self.alpha = self.temp = param
         self.trials = trials
         self.stepsize = stepsize  # learning rate
 
@@ -77,6 +77,22 @@ class UCBAgent(BaseAgent):
         self.update_estimates(time, reward, choice)
 
 
+class SoftmaxAgent(BaseAgent):
+
+    def __str__(self) -> str:
+        return f"Softmax τ = {self.temp}"
+
+    def get_likelihoods(self, time, reward, choice):
+        if np.isnan(choice):
+            self.likelihoods[time] = 1  # log(1) = 0
+            return
+
+        exponential = np.exp(self.estimates / self.temp)
+        self.action_prob = exponential / np.sum(exponential)
+
+        self.update_estimates(time, reward, choice)
+
+
 class GradientAgent(BaseAgent):
 
     def __str__(self) -> str:
@@ -106,7 +122,7 @@ def load_data(data):
     time = np.array(df['Trial'])
     rewards = np.array(df['Reward'])
     choices = np.array(df['Choice'])
-    return time, rewards, choices  # can divide rewards by 100... why do so?
+    return time, rewards / 100, choices  # can divide rewards by 100... np errors if not when using softmax
 
 
 def negative_log_likelihood(param, stepsize, model, trials, data):
@@ -115,6 +131,8 @@ def negative_log_likelihood(param, stepsize, model, trials, data):
         agent = UCBAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     elif model == "Gradient":
         agent = GradientAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
+    elif model == "Softmax":
+        agent = SoftmaxAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     else:  # model is eGreedy
         agent = eGreedyAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     for t in time:
@@ -163,8 +181,8 @@ def initialize_arms(data):
     arms = []
     num_arms = len(df.columns)
     for i in range(num_arms):
-        arm = np.array(df[f'Arm_{i + 1}'])
-        # arm = np.array(df[f'Arm_{i + 1}'] / 100)
+        # arm = np.array(df[f'Arm_{i + 1}'])
+        arm = np.array(df[f'Arm_{i + 1}'] / 100)
         arms.append(arm)
     return arms
 
@@ -188,10 +206,9 @@ def run_bandits(model, arms, runs, param, arm_vals):
 
 
 def main():
-    # num_participants = 5
     num_participants = 5
     # models = ["UCB", "eGreedy", "Gradient"]
-    models = ["eGreedy"]
+    models = ["Softmax"]
     model_ave_rewards = {}
     for i in range(num_participants):
         print(f"PARTICIPANT {i + 1}")
@@ -218,7 +235,7 @@ def main():
             print(f"Average reward for {model} agent = {model_ave_rewards[model]}")
 
         df = pd.read_csv(behavioural_data)
-        # df['Reward'] = df['Reward'] / 100
+        df['Reward'] = df['Reward'] / 100
         behavioural_average_reward = df['Reward'].sum() / trials
         print(f"Average reward for participant data = {behavioural_average_reward}")
         print()

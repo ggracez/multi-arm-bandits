@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
+from tqdm import tqdm
+
 
 def run_experiment(agents: list[Agent], environment, steps=1000):
     """each agent represents a different epsilon value
@@ -21,10 +23,7 @@ def run_experiment(agents: list[Agent], environment, steps=1000):
     average_reward = np.zeros((steps, len(agents)))
     optimal_pulls = np.zeros((steps, len(agents)))
 
-    for run in range(environment.runs):
-
-        if run % 100 == 0:
-            print(".", end="")
+    for run in tqdm(range(environment.runs)):
 
         environment.reset()
         for agent in agents:
@@ -221,6 +220,52 @@ def compare_ns_stepsizes():
     graph_results(average_reward, optimal_pulls, title, legend, save_loc)
 
 
+def compare_stationary_softmax():
+    """Compare different temperature values in a stationary environment
+    """
+    environment = Environment()  # can change # of runs here (default 2000)
+    agents = []
+    temperature_vals = [0.1, 0.2, 0.5, 1, 2]
+    for val in temperature_vals:
+        agents.append(Agent(environment, policy="softmax", param=val, stepsize=0.1))
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    title = "Different Softmax Temperature Values in a Stationary Environment"
+    graph_results([average_reward], [optimal_pulls], title, agents, "figures/softmax_comparison.png")
+    print()
+
+
+def compare_nonstationary_softmax():
+    """Compare different temperature values in a stationary environment
+    """
+    environment = Environment(arms=4, stationary=False, decay=0.05)
+    agents = []
+    temperature_vals = [0.1, 0.2, 0.5, 1, 2]
+    for val in temperature_vals:
+        agents.append(Agent(environment, policy="softmax", param=val, stepsize=0.1))
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    title = "Different Softmax Temperature Values in a Non-Stationary Environment"
+    graph_results(None, [optimal_pulls], title, agents, "figures/softmax_ns_comparison.png")
+    print()
+
+
+def compare_stationary_softmax_explore():
+    """Compare different temperature values in a stationary environment
+    """
+    environment = Environment(runs=500)  # can change # of runs here (default 2000)
+    agents = []
+    # temperature_vals = [0.1, 0.2, 0.5]
+    explore_vals = [None, 0.1, 0.3, 0.5]
+    for val in explore_vals:
+        agents.append(Agent(environment, policy="softmax", param=0.1, stepsize=0.1, explore=val))
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    title = "Softmax with Explore in a Stationary Environment"
+    graph_results([average_reward], [optimal_pulls], title, agents, "figures/softmax_explore_comparison.png")
+    print()
+
+
 # compare_stationary_eps()
 # compare_envs()
 # compare_stationary_ucb()
@@ -228,4 +273,6 @@ def compare_ns_stepsizes():
 # compare_stationary_gradients()
 # compare_stationary_all()
 # compare_nonstationary_all()
-
+# compare_stationary_softmax()
+# compare_nonstationary_softmax()
+# compare_stationary_softmax_explore()

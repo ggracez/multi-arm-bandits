@@ -37,3 +37,4 @@ We also try different models such as UCB and Gradient.
 - [https://github.com/ShangtongZhang/reinforcement-learning-an-introduction](https://github.com/ShangtongZhang/reinforcement-learning-an-introduction)
 - [https://github.com/jettdlee/10_armed_bandit](https://github.com/jettdlee/10_armed_bandit)
 - [https://github.com/dquail/NonStationaryBandit](https://github.com/dquail/NonStationaryBandit)
+- [https://github.com/ondrejbiza/bandits](https://github.com/ondrejbiza/bandits)
