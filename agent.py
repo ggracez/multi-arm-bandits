@@ -1,9 +1,10 @@
 import numpy as np
+from environment import Environment
 
 
 class Agent:
 
-    def __init__(self, environment, policy, param, stepsize=None, baseline=False, explore=None):
+    def __init__(self, environment, policy, param, stepsize=None, baseline=False, explore=None, decay=None):
         """
         Args:
             environment (Environment)
@@ -11,6 +12,8 @@ class Agent:
             param (float): epsilon, c, alpha, or tau
             stepsize (float, optional): learning rate parameter. Defaults to None.
             baseline (bool, optional): Whether to use a baseline. Defaults to False.
+            explore (float, optional): Explore parameter for softmax. Defaults to None.
+            decay (float, optional): Decay parameter between 0 and 1. Defaults to None.
         """
 
         self.environment = environment
@@ -32,6 +35,7 @@ class Agent:
             self.explore = explore
 
         self.stepsize = stepsize  # for gradient, this is the baseline stepsize (not implemented)
+        self.decay = decay
 
         self.estimates = np.zeros(self.environment.arms)  # estimated q
         self.times_taken = np.zeros(self.environment.arms)  # n
@@ -43,11 +47,24 @@ class Agent:
 
         if self.policy == "egreedy":
             if self.epsilon == 0:
-                return f"ε = 0 (greedy)"
-            elif self.stepsize:
-                return f"ε = {self.epsilon} with stepsize = {self.stepsize}"
-            else:
-                return f"ε = {self.epsilon}"
+                return "ε = 0 (greedy)"
+            s = f"ε = {self.epsilon}"
+            if self.stepsize:
+                if self.decay:
+                    s += f" with stepsize = {self.stepsize} and decay = {self.decay}"
+                else:
+                    s += f" with stepsize = {self.stepsize}"
+            elif self.decay:
+                s += f" with decay = {self.decay}"
+            return s
+
+        # if self.policy == "egreedy":
+        #     if self.epsilon == 0:
+        #         return f"ε = 0 (greedy)"
+        #     elif self.stepsize:
+        #         return f"ε = {self.epsilon} with stepsize = {self.stepsize}"
+        #     else:
+        #         return f"ε = {self.epsilon}"
 
         elif self.policy == "ucb":
             return f"UCB c = {self.c}"
@@ -61,6 +78,8 @@ class Agent:
         elif self.policy == "softmax":
             if self.explore:
                 return f"Softmax τ = {self.temp} with explore = {self.explore}"
+            elif self.decay:  # later may need decay + explore?
+                return f"Softmax τ = {self.temp} with decay = {self.decay}"
             else:
                 return f"Softmax τ = {self.temp}"
 
@@ -79,7 +98,7 @@ class Agent:
                 action = np.where(self.estimates == greedy_action)[0]  # returns list of actions
 
                 # choose one of them at random (accounts for duplicates)
-                if len(action) == 0:  # idk why but without this it breaks
+                if len(action) == 0:
                     action = greedy_action
                 else:
                     action = np.random.choice(action)
@@ -107,9 +126,6 @@ class Agent:
             else:
                 exponential = np.exp(self.estimates / self.temp)
             self.action_prob = exponential / np.sum(exponential)
-            # print(self.estimates)
-            # print(exponential)
-            # print(self.action_prob)
             action = np.random.choice(len(self.estimates), p=self.action_prob)
 
         return action
@@ -122,9 +138,9 @@ class Agent:
             reward (float): nth reward
             action (int): nth action
         """
+        # selected = 1 if self.action_history[action] == self.time else 0  # indicator for decay
+
         self.times_taken[action] += 1  # update n
-        self.time += 1  # update t
-        self.action_history[action] = self.time  # update last action
 
         if self.policy == "gradient":
             # gradient algorithm uses action preferences, updated with:
@@ -143,12 +159,29 @@ class Agent:
             self.estimates += self.alpha * (reward - baseline) * (one_hot - self.action_prob)
 
         else:
-            if not self.stepsize:
-                # sample average stepsize: stepsize = 1/n
-                self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]
+
+            if self.decay:
+                # self.estimates[action] = self.estimates[action] * self.decay + reward * selected
+                for arm in range(self.environment.arms):
+
+                    selected = 1 if self.action_history[arm] == self.time else 0  # indicator for decay
+                    # self.estimates[arm] = self.estimates[arm] * self.decay + reward * selected
+                    if arm != action:
+                        self.estimates[arm] = self.estimates[arm] * self.decay  # bc decay < 1, this is a decrease
+                    else:
+                        self.estimates[arm] = self.estimates[arm] * self.decay + reward
+                    # print(f"{selected=}")
+                    # print(f"{self.action_history=}")
+                    # print(f"{arm=}, {self.estimates[arm]=}")
             else:
-                # constant stepsize: exponential recency weighted average (ERWA)
-                self.estimates[action] += self.stepsize * (reward - self.estimates[action])
+                if not self.stepsize:
+                    # sample average stepsize: stepsize = 1/n
+                    self.estimates[action] += (reward - self.estimates[action]) / self.times_taken[action]
+                else:
+                    # constant stepsize: exponential recency weighted average (ERWA)
+                    self.estimates[action] += self.stepsize * (reward - self.estimates[action])
+        self.time += 1  # update t
+        self.action_history[action] = self.time  # update last action
 
     def reset(self):
         """Reset to initial values
@@ -158,3 +191,41 @@ class Agent:
         self.action_prob = np.zeros(self.environment.arms)
         self.action_history = np.zeros(self.environment.arms)
         self.time = 0
+
+
+def test():
+    print()
+    # estimates = [0, 0, 0, 0], action_history = [0, 0, 0, 0]
+    agent = Agent(Environment(arms=4), policy="egreedy", param=0.1, decay=0.1)
+
+    # choose action 0, get reward 1
+    # estimates = [1, 0, 0, 0]
+    print(f"reward = 1, action = 0: {agent.estimates=}")
+    agent.update_estimates(reward=1, action=0)
+
+    # choose action 1, get reward 1
+    # previous action was 0
+    # so for action 0: ev = ev * decay + reward * selected = 1 * 0.1 + 0 * 1 = 0.1
+    # action 1: ev = ev * decay + reward * selected = 0 * 0.1 + 1 * 0 = 0
+    # doesn't seem right???
+    # estimates [0.1, 0, 0, 0]
+
+    # maybe i overthought lol
+    # indicator is not on previous trial, it's on current trial
+    # so for action 0: ev = ev * decay + reward * selected = 1 * 0.1 + 0 * 0 = 0.1
+    # action 1: ev = ev * decay + reward * selected = 0 * 0.1 + 1 * 1 = 1
+    # estimates [0.1, 1, 0, 0]
+    print(f"reward = 1, action = 1: {agent.estimates=}")
+    agent.update_estimates(reward=1, action=1)
+
+    # choose action 3, get reward 1
+    # action 0: ev * decay = 0.1 * 0.1 = 0.01
+    # action 1: ev * decay = 1 * 0.1 = 0.1
+    # action 2: ev * decay = 0 * 0.1 = 0
+    # action 3: ev * decay + reward = 0 * 0.1 + 1 = 1
+    # estimates [0.01, 0.1, 0, 1]
+    print(f"reward = 1, action = 3: {agent.estimates=}")
+    agent.update_estimates(reward=1, action=3)
+
+    print(f"reward = 1, action = 3: {agent.estimates=}")
+    agent.update_estimates(reward=1, action=3)
