@@ -9,8 +9,7 @@ from tqdm import tqdm
 
 
 def run_experiment(agents: list[Agent], environment, steps=1000):
-    """each agent represents a different epsilon value
-
+    """
     Args:
         agents (list[Agent]): eGreedy agents with different epsilon values.
         environment (Environment): Defaults to 10-arm testbed with 2000 runs.
@@ -31,7 +30,7 @@ def run_experiment(agents: list[Agent], environment, steps=1000):
 
         for step in range(steps):
             environment.update_arms()
-            for i in range(len(agents)):  # for each epsilon value
+            for i in range(len(agents)):  # for each agent
                 agent = agents[i]
                 action = agent.choose_action()
                 reward = np.random.normal(environment.means[action], 1)
@@ -266,6 +265,40 @@ def compare_stationary_softmax_explore():
     print()
 
 
+def compare_egreedy_decay():
+    """Compare egreedy with different decay values in a stationary environment
+    """
+    environment = Environment(arms=4)  # can change # of runs here (default 2000)
+    agents = []
+    decay_vals = [0, 0.1, 0.5, 1]
+    for val in decay_vals:
+        agents.append(Agent(environment, policy="egreedy", param=0.1, decay=val))
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    title = "Different Decay Values in a Stationary Environment"
+    graph_results([average_reward], [optimal_pulls], title, agents, "egreedy_decay.png")
+    print()
+
+
+def compare_softmax_decay():
+    """Compare softmax with different decay values in a stationary environment
+    """
+    environment = Environment(arms=4)  # can change # of runs here (default 2000)
+    agents = []
+    decay_vals = [0, 0.05, 0.1]
+    for val in decay_vals:
+        agents.append(Agent(environment, policy="softmax", param=0.1, decay=val))
+    # run the experiment!!
+    print("Running Experiment...")
+    average_reward, optimal_pulls = run_experiment(agents, environment)  # can change # of steps here (default 1000)
+    title = "Different Decay Values in a Stationary Environment"
+    graph_results([average_reward], [optimal_pulls], title, agents, "softmax_decay.png")
+    print()
+
+
+# compare_softmax_decay()
+compare_egreedy_decay()
 # compare_stationary_eps()
 # compare_envs()
 # compare_stationary_ucb()

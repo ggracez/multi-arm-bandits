@@ -138,9 +138,10 @@ class Agent:
             reward (float): nth reward
             action (int): nth action
         """
-        # selected = 1 if self.action_history[action] == self.time else 0  # indicator for decay
 
         self.times_taken[action] += 1  # update n
+        self.time += 1  # update t
+        self.action_history[action] = self.time  # update last action MAY NOT NEED
 
         if self.policy == "gradient":
             # gradient algorithm uses action preferences, updated with:
@@ -159,20 +160,12 @@ class Agent:
             self.estimates += self.alpha * (reward - baseline) * (one_hot - self.action_prob)
 
         else:
-
             if self.decay:
-                # self.estimates[action] = self.estimates[action] * self.decay + reward * selected
                 for arm in range(self.environment.arms):
-
-                    selected = 1 if self.action_history[arm] == self.time else 0  # indicator for decay
-                    # self.estimates[arm] = self.estimates[arm] * self.decay + reward * selected
                     if arm != action:
-                        self.estimates[arm] = self.estimates[arm] * self.decay  # bc decay < 1, this is a decrease
+                        self.estimates[arm] = self.estimates[arm] * self.decay
                     else:
                         self.estimates[arm] = self.estimates[arm] * self.decay + reward
-                    # print(f"{selected=}")
-                    # print(f"{self.action_history=}")
-                    # print(f"{arm=}, {self.estimates[arm]=}")
             else:
                 if not self.stepsize:
                     # sample average stepsize: stepsize = 1/n
@@ -180,8 +173,6 @@ class Agent:
                 else:
                     # constant stepsize: exponential recency weighted average (ERWA)
                     self.estimates[action] += self.stepsize * (reward - self.estimates[action])
-        self.time += 1  # update t
-        self.action_history[action] = self.time  # update last action
 
     def reset(self):
         """Reset to initial values
@@ -199,21 +190,14 @@ def test():
     agent = Agent(Environment(arms=4), policy="egreedy", param=0.1, decay=0.1)
 
     # choose action 0, get reward 1
+    # action 0: ev = ev * decay + reward = 0 * 0.1 + 1 * 1 = 1
     # estimates = [1, 0, 0, 0]
     print(f"reward = 1, action = 0: {agent.estimates=}")
     agent.update_estimates(reward=1, action=0)
 
-    # choose action 1, get reward 1
-    # previous action was 0
-    # so for action 0: ev = ev * decay + reward * selected = 1 * 0.1 + 0 * 1 = 0.1
-    # action 1: ev = ev * decay + reward * selected = 0 * 0.1 + 1 * 0 = 0
-    # doesn't seem right???
-    # estimates [0.1, 0, 0, 0]
-
-    # maybe i overthought lol
-    # indicator is not on previous trial, it's on current trial
-    # so for action 0: ev = ev * decay + reward * selected = 1 * 0.1 + 0 * 0 = 0.1
-    # action 1: ev = ev * decay + reward * selected = 0 * 0.1 + 1 * 1 = 1
+    # choose action 1, get reward 0
+    # action 0: ev = ev * decay = 1 * 0.1 = 0.1
+    # action 1: ev = ev * decay + reward = 0 * 0.1 + 1 = 1
     # estimates [0.1, 1, 0, 0]
     print(f"reward = 1, action = 1: {agent.estimates=}")
     agent.update_estimates(reward=1, action=1)

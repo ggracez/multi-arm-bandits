@@ -8,11 +8,12 @@ from scipy.optimize import minimize_scalar
 
 
 class BaseAgent:
-    def __init__(self, arms, param, trials, stepsize=.9):
+    def __init__(self, arms, param, trials, decay, stepsize=.9):
         self.arms = arms
         self.epsilon = self.c = self.alpha = self.temp = param
         self.trials = trials
         self.stepsize = stepsize  # learning rate
+        self.decay = decay
 
         self.estimates = np.zeros(self.arms)  # estimated q
         self.times_taken = np.zeros(self.arms)  # n
@@ -26,12 +27,19 @@ class BaseAgent:
         # we do choice-1 because the data is 1-indexed
         self.times_taken[choice - 1] += 1  # update n
 
-        # # sample average stepsize: stepsize = 1/n
-        # self.estimates[choice - 1] += (reward - self.estimates[choice - 1]) / self.times_taken[choice - 1]
+        if self.decay:
+            for arm in range(self.arms):
+                if arm != choice - 1:
+                    self.estimates[arm] *= self.decay
+                else:
+                    self.estimates[arm] = self.estimates[arm] * self.decay + reward
+        else:
+            # # sample average stepsize: stepsize = 1/n
+            # self.estimates[choice - 1] += (reward - self.estimates[choice - 1]) / self.times_taken[choice - 1]
 
-        # constant stepsize
-        # step_size = .9  # chosen at random
-        self.estimates[choice - 1] += self.stepsize * (reward - self.estimates[choice - 1])
+            # constant stepsize
+            # step_size = .9  # chosen at random
+            self.estimates[choice - 1] += self.stepsize * (reward - self.estimates[choice - 1])
 
     def reset(self):
         self.estimates = np.zeros(self.arms)  # estimated q
@@ -125,7 +133,7 @@ def load_data(data):
     return time, rewards / 100, choices  # can divide rewards by 100... np errors if not when using softmax
 
 
-def negative_log_likelihood(param, stepsize, model, trials, data):
+def negative_log_likelihood(param, stepsize, decay, model, trials, data):
     time, rewards, choices = load_data(data)
     if model == "UCB":
         agent = UCBAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
@@ -134,7 +142,7 @@ def negative_log_likelihood(param, stepsize, model, trials, data):
     elif model == "Softmax":
         agent = SoftmaxAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
     else:  # model is eGreedy
-        agent = eGreedyAgent(arms=4, param=param, trials=trials, stepsize=stepsize)
+        agent = eGreedyAgent(arms=4, param=param, trials=trials, stepsize=stepsize, decay=decay)
     for t in time:
         agent.get_likelihoods(t - 1, rewards[t - 1], choices[t - 1])
     log_likelihood = -(np.sum(np.log(agent.likelihoods)))
@@ -143,26 +151,33 @@ def negative_log_likelihood(param, stepsize, model, trials, data):
 
 def manual_optimization(data, model, trials):
     params = np.arange(0.01, 1, 0.01)
-    stepsizes = np.arange(0.1, 1, 0.1)
+    # stepsizes = np.arange(0.1, 1, 0.1)
+    stepsizes = [0.9]
+    decays = np.arange(0.1, 1, 0.1)
     param_list = []  # x axis
     stepsize_list = []
+    decay_list = []
     likelihood_list = []  # y axis
 
     for param in params:
         for stepsize in stepsizes:
-            log_likelihood = negative_log_likelihood(param, stepsize, model, trials, data)
-            param_list.append(param)
-            stepsize_list.append(stepsize)
-            likelihood_list.append(log_likelihood)
+            for decay in decays:
+                log_likelihood = negative_log_likelihood(param, stepsize, decay, model, trials, data)
+                param_list.append(param)
+                stepsize_list.append(stepsize)
+                decay_list.append(decay)
+                likelihood_list.append(log_likelihood)
 
     # find params for min log likelihood
     min_likelihood = np.min(likelihood_list)
+    min_decay = decay_list[np.argmin(likelihood_list)]
     min_param = param_list[np.argmin(likelihood_list)]
     min_stepsize = stepsize_list[np.argmin(likelihood_list)]
 
     print(f"Optimized param (MANUAL) = {min_param}")
     print(f"Optimized stepsize (MANUAL) = {min_stepsize}")
     print(f"Log likelihood (MANUAL) = {min_likelihood}")
+    print(f"Optimized decay (MANUAL) = {min_decay}")
 
     return min_param
 
@@ -208,7 +223,7 @@ def run_bandits(model, arms, runs, param, arm_vals):
 def main():
     num_participants = 5
     # models = ["UCB", "eGreedy", "Gradient"]
-    models = ["Softmax"]
+    models = ["eGreedy"]
     model_ave_rewards = {}
     for i in range(num_participants):
         print(f"PARTICIPANT {i + 1}")
